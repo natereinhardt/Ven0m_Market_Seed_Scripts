@@ -5,14 +5,16 @@ Sub BuildMonthlyShipmentSummary()
     Dim shipmentDate As Date
     Dim monthKey As Variant
     Dim monthDict As Object
+    Dim shipmentSheetsDict As Object
     Dim uniqueItemsDict As Object
     Dim i As Long
     Dim lastRow As Long
     Dim itemName As String
-    Dim uniqueItemCount As Long
+    Dim dateParts() As String
     
     ' Create dictionaries to store month keys and counts
     Set monthDict = CreateObject("Scripting.Dictionary")
+    Set shipmentSheetsDict = CreateObject("Scripting.Dictionary")
     Set uniqueItemsDict = CreateObject("Scripting.Dictionary")
     
     ' Create the destination worksheet
@@ -33,6 +35,7 @@ Sub BuildMonthlyShipmentSummary()
     destWs.Cells(1, 1).Value = "Month"
     destWs.Cells(1, 2).Value = "Shipment Count"
     destWs.Cells(1, 3).Value = "Unique Item Count"
+    destWs.Cells(1, 4).Value = "Shipment Sheets"
     
     ' Loop through all worksheets
     For Each ws In ThisWorkbook.Sheets
@@ -41,9 +44,8 @@ Sub BuildMonthlyShipmentSummary()
         ' Check if the sheet name starts with "Shipment"
         If Left(sheetName, 9) = "Shipment-" Then
             ' Extract the date part from the sheet name
-            Dim dateParts() As String
             dateParts = Split(sheetName, "-")
-            shipmentDate = DateSerial(dateParts(3), dateParts(1), dateParts(2))
+            shipmentDate = DateSerial(CInt(dateParts(3)), CInt(dateParts(1)), CInt(dateParts(2)))
             monthKey = Format(shipmentDate, "mmmm yyyy")
             
             ' Increment the count for the month key in the dictionary
@@ -51,6 +53,13 @@ Sub BuildMonthlyShipmentSummary()
                 monthDict(monthKey) = monthDict(monthKey) + 1
             Else
                 monthDict.Add monthKey, 1
+            End If
+            
+            ' Store sheet names in the dictionary
+            If shipmentSheetsDict.exists(monthKey) Then
+                shipmentSheetsDict(monthKey) = shipmentSheetsDict(monthKey) & ", " & sheetName
+            Else
+                shipmentSheetsDict.Add monthKey, sheetName
             End If
             
             ' Track unique item names for the month
@@ -75,6 +84,7 @@ Sub BuildMonthlyShipmentSummary()
         destWs.Cells(i, 1).Value = monthKey
         destWs.Cells(i, 2).Value = monthDict(monthKey)
         destWs.Cells(i, 3).Value = uniqueItemsDict(monthKey).Count
+        destWs.Cells(i, 4).Value = shipmentSheetsDict(monthKey)
         i = i + 1
     Next monthKey
     
@@ -82,7 +92,7 @@ Sub BuildMonthlyShipmentSummary()
     destWs.Columns("A").NumberFormat = "mmmm yyyy"
     
     ' Autofit columns
-    destWs.Columns("A:C").AutoFit
+    destWs.Columns("A:D").AutoFit
     
     ' Activate the summary worksheet
     destWs.Activate
